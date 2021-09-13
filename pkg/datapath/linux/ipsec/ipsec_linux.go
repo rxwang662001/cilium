@@ -20,6 +20,7 @@ import (
 	"github.com/cilium/cilium/pkg/datapath/linux/linux_defaults"
 	"github.com/cilium/cilium/pkg/datapath/linux/route"
 	"github.com/cilium/cilium/pkg/maps/encrypt"
+	"github.com/cilium/cilium/pkg/option"
 
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
@@ -160,7 +161,7 @@ func _ipSecReplacePolicyInFwd(src, dst, tmplSrc, tmplDst *net.IPNet, tunnel bool
 		policy.Mark = &netlink.XfrmMark{
 			Mask: linux_defaults.IPsecMarkMaskIn,
 		}
-		if tunnel {
+		if tunnel || option.Config.EnableEndpointRoutes {
 			// Required as this policy with the following mark does not have a
 			// corresponding XFRM state matching it. The XFRM state for Dir=In
 			// has mark for decryption only. If we don't mark this optional,

@@ -54,8 +54,9 @@ func (e *Endpoints) DeepEqual(o *Endpoints) bool {
 // +k8s:deepcopy-gen=true
 // +deepequal-gen=true
 type Backend struct {
-	Ports    serviceStore.PortConfiguration
-	NodeName string
+	Ports         serviceStore.PortConfiguration
+	NodeName      string
+	HintsForZones []string
 }
 
 // String returns the string representation of an endpoints resource, with
@@ -244,6 +245,13 @@ func ParseEndpointSliceV1(ep *slim_discovery_v1.EndpointSlice) (EndpointSliceID,
 				name, lbPort := parseEndpointPortV1(port)
 				if lbPort != nil {
 					backend.Ports[name] = lbPort
+				}
+			}
+			if sub.Hints != nil && (*sub.Hints).ForZones != nil {
+				hints := (*sub.Hints).ForZones
+				backend.HintsForZones = make([]string, len(hints))
+				for i, hint := range hints {
+					backend.HintsForZones[i] = hint.Name
 				}
 			}
 		}

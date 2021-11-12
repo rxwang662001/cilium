@@ -85,6 +85,8 @@ type ServiceCache struct {
 	externalEndpoints map[ServiceID]externalEndpoints
 
 	nodeAddressing datapath.NodeAddressing
+
+	selfNodeZoneLabel string
 }
 
 // NewServiceCache returns a new ServiceCache
@@ -216,6 +218,25 @@ func (s *ServiceCache) UpdateService(k8sSvc *slim_corev1.Service, swg *lock.Stop
 	return svcID
 }
 
+const LabelTopologyZone = "topology.kubernetes.io/zone"
+
+func (s *ServiceCache) UpdateSelfNodeLabels(labels map[string]string) {
+	if !option.Config.EnableServiceTopology {
+		return
+	}
+
+	zone, ok := labels[LabelTopologyZone]
+	if !ok {
+		return
+	}
+
+	if s.selfNodeZoneLabel == zone {
+		return
+	}
+
+	// TODO
+}
+
 func (s *ServiceCache) EnsureService(svcID ServiceID, swg *lock.StoppableWaitGroup) bool {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
@@ -274,10 +295,35 @@ func (s *ServiceCache) updateEndpoints(esID EndpointSliceID, newEndpoints *Endpo
 		s.endpoints[esID.ServiceID] = eps
 	}
 
-	eps.Upsert(esID.EndpointSliceName, newEndpoints)
-
 	// Check if the corresponding Endpoints resource is already available
 	svc, ok := s.services[esID.ServiceID]
+
+	if option.Config.EnableServiceTopology && ok && svc.TopologyAware && s.selfNodeZoneLabel != "" {
+		// TODO
+		filteredBackends := map[string]*Backend{}
+		for key, backend := range newEndpoints.Backends {
+			if len(backend.HintsForZones) == 0 {
+				break
+			}
+
+			zoneMatch := false
+			for _, hint := range backend.HintsForZones {
+				if hint == s.selfNodeZoneLabel {
+					zoneMatch = true
+					break
+				}
+			}
+			if zoneMatch {
+				filteredBackends[key] = backend
+			}
+		}
+		if len(filteredBackends) != 0 {
+			newEndpoints.Backends = filteredBackends
+		}
+	}
+
+	eps.Upsert(esID.EndpointSliceName, newEndpoints)
+
 	endpoints, serviceReady := s.correlateEndpoints(esID.ServiceID)
 	if ok && serviceReady {
 		swg.Add()

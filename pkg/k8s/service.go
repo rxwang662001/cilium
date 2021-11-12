@@ -209,8 +209,17 @@ func ParseService(svc *slim_corev1.Service, nodeAddressing datapath.NodeAddressi
 		}
 	}
 
+	if option.Config.EnableServiceTopology {
+		// TODO other checks
+		if val, ok := svc.Labels[labelTopologyAwareHints]; ok && (val == "auto" || val == "Auto") {
+			svcInfo.TopologyAware = true
+		}
+	}
+
 	return svcID, svcInfo
 }
+
+const labelTopologyAwareHints = "service.kubernetes.io/topology-aware-hints"
 
 // ServiceID identifies the Kubernetes service
 type ServiceID struct {
@@ -323,6 +332,8 @@ type Service struct {
 	// Type is the internal service type
 	// +deepequal-gen=false
 	Type loadbalancer.SVCType
+
+	TopologyAware bool
 }
 
 // DeepEqual returns true if both the receiver and 'o' are deeply equal.

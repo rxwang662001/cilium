@@ -44,6 +44,7 @@ func (k *K8sWatcher) NodesInit(k8sClient *k8s.K8sClient) {
 							k8sClient.ReMarkNodeReady()
 						}
 						errs := k.NodeChain.OnAddNode(node)
+						k.K8sSvcCache.UpdateSelfNodeLabels(node.GetLabels())
 						k.K8sEventProcessed(metricNode, metricCreate, errs == nil)
 					}
 					k.K8sEventReceived(metricNode, metricCreate, valid, false)
@@ -63,6 +64,7 @@ func (k *K8sWatcher) NodesInit(k8sClient *k8s.K8sClient) {
 								equal = true
 							} else {
 								errs := k.NodeChain.OnUpdateNode(oldNode, newNode)
+								k.K8sSvcCache.UpdateSelfNodeLabels(newNodeLabels)
 								k.K8sEventProcessed(metricNode, metricUpdate, errs == nil)
 							}
 						}

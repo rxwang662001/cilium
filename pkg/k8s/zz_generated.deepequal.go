@@ -256,6 +256,9 @@ func (in *Service) deepEqual(other *Service) bool {
 	if in.SessionAffinityTimeoutSec != other.SessionAffinityTimeoutSec {
 		return false
 	}
+	if in.TopologyAware != other.TopologyAware {
+		return false
+	}
 
 	return true
 }

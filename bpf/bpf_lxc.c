@@ -796,6 +796,7 @@ ct_recreate4:
 	{
 		struct egress_info *info;
 		struct endpoint_key key = {};
+		bool is_reply = false;
 
 		/* If tunnel endpoint is found in ipcache, it means the remote endpoint is
 		 * in cluster. In this case, we should skip egress gateway. If destination
@@ -808,6 +809,15 @@ ct_recreate4:
 		 * skip egress gateway.
 		 */
 		if (lookup_ip4_endpoint(ip4))
+			goto skip_egress_gateway;
+
+		/* If the packet is a reply, it means that outside has initiated
+		 * the connection, and so we should skip egress gateway, since
+		 * an egress policy is only matching connections originating
+		 * from the pod.
+		 */
+		if (!ct_is_reply4(get_ct_map4(&tuple), ctx, ETH_HLEN + ipv4_hdrlen(ip4), &tuple,
+				  &is_reply) && is_reply)
 			goto skip_egress_gateway;
 
 		info = lookup_ip4_egress_endpoint(ip4->saddr, ip4->daddr);
